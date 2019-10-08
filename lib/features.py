@@ -727,7 +727,7 @@ features = {
         "back": "-",
         "tense": "-",
     },
-    "EY": {
+    "E": {
         "syllabic": "+",
         "consonantal": "-",
         "approximant": "+",
@@ -867,7 +867,7 @@ features = {
         "back": "+",
         "tense": "-",
     },
-    "OW": {
+    "O": {
         "syllabic": "+",
         "consonantal": "-",
         "approximant": "+",
@@ -923,7 +923,7 @@ features = {
         "back": "+",
         "tense": "-",
     },
-    "ɔ": {
+    "AO": {
         "syllabic": "+",
         "consonantal": "-",
         "approximant": "+",

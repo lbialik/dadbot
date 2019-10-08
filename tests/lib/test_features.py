@@ -14,4 +14,8 @@ def test_has_all_phonemes():
         no_stress = re.sub(r"\d+", "", symbol)
         if no_stress not in features:
             missing_phonemes.add(no_stress)
-    assert missing_phonemes == set()
+
+    # We expect to be missing exactly "AW", "AY", ER", "EY", "OW", and "OY".
+    # Because they are all either diphthongs (which we map to monophthongs), or
+    # for "ER" it's literally just the "R" sound.
+    assert missing_phonemes == set(["AW", "AY", "ER", "EY", "OW", "OY"])
