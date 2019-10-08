@@ -1,9 +1,7 @@
 import sys
 
-from typing import List
 
-
-def main(argv: List[str]) -> None:
+def main(argv):
     print("Hello {}".format(argv[1]))
 
 
