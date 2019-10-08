@@ -1,5 +1,7 @@
-# python
+# Python-related things
 *.pyc
-
-# mypy
 .mypy_cache/
+venv/
+
+# vscode
+.vscode/
