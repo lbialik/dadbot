@@ -1,19 +1,17 @@
 import cmudict
 from functools import reduce
 import re
-from typing import Dict
-from typing import List
 
 from lib.features import features
 
 
 # We store the cmudict as an object in memory so that we don't have to reload
 # it every single time we call word_to_phonemes.
-_cmudict_cache = cmudict.dict()
+cmudict_cache = cmudict.dict()
 
 
-# Construct mappings from diphthongs to
-_diphthong_pairs = {
+# Maps from diphthongs to their monophthonic parts. Also "ER" for no reason.
+diphthong_pairs = {
     "AW": ["AE", "UH"],
     "AY": ["AA", "IH"],
     "ER": ["R"],
@@ -23,41 +21,45 @@ _diphthong_pairs = {
 }
 
 
-def _expand_phoneme(phoneme: str) -> List[str]:
+def expand_phoneme(phoneme):
     """
     Expands a phoneme to potentially multiple phonemes. Used to map diphthongs
     to its monophthongs in series.
     """
-    return _diphthong_pairs.get(phoneme, [phoneme])
+    return diphthong_pairs.get(phoneme, [phoneme])
 
 
-def word_to_phonemes(word: str) -> List[List[str]]:
+def word_to_phonemes(word):
     """
     Maps a single word onto a series of possible pronunciation. Each
     pronunciation is a series of phonemes, represented in the format provided
-    by CMU Dict. See http://www.speech.cs.cmu.edu/cgi-bin/cmudict for reference
+    by CMU Dict. See http://www.speech.cs.cmu.edu/cgi-bin/cmudict for
+    reference.
     """
-    return [
-        reduce(
-            lambda x, y: x + y,
-            [
-                _expand_phoneme(
-                    re.sub(r"\d+", "", phoneme)
-                )  # Stripping stress markers from the words
-                for phoneme in pronunciation
-            ],
-        )
-        for pronunciation in _cmudict_cache[word]
-    ]
+    source_pronunciations = cmudict_cache[word]
+    pronunciations = []
+
+    for source_pronunciation in source_pronunciations:
+        pronunciation = []
+        for phoneme in source_pronunciation:
+            pronunciation += expand_phoneme(re.sub(r"\d+", "", phoneme))
+        pronunciations.append(pronunciation)
+
+    return pronunciations
 
 
-def word_to_feature_matrix(word: str) -> List[List[Dict[str, str]]]:
+def word_to_feature_matrix(word):
     """
     Maps a single word onto a series of feature matrices, one for each
     pronunciation.
     """
     pronunciations = word_to_phonemes(word)
-    return [
-        [features[phoneme] for phoneme in pronunciation]
-        for pronunciation in pronunciations
-    ]
+    feature_matrices = []
+
+    for pronunciation in pronunciations:
+        feature_matrix = []
+        for phoneme in pronunciation:
+            feature_matrix.append(features[phoneme])
+        feature_matrices.append(feature_matrix)
+
+    return feature_matrices

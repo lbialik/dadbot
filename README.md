@@ -16,8 +16,7 @@ Please ensure you have the following installed:
     * On Windows, download that link, or the Windows subsystem for Linux. Make sure you add it to your `%PATH%`.
     * On Mac, use [brew](https://brew.sh/).
     * On Linux, you're on your own :)
-* [Pre-commit](https://pre-commit.com/) &mdash; We will use this to execute several Python linters and formatters:
-    * [mypy](http://mypy-lang.org/) &mdash; Static typing
+* [Pre-commit](https://pre-commit.com/) &mdash; We will use this to execute a Python formattter:
     * [black](https://github.com/psf/black) &mdash; Formatting
 
 Follow these steps:
