@@ -10,7 +10,7 @@ from lib.features import features
 cmudict_cache = cmudict.dict()
 
 
-# Construct mappings from diphthongs to
+# Maps from diphthongs to their monophthonic parts. Also "ER" for no reason.
 diphthong_pairs = {
     "AW": ["AE", "UH"],
     "AY": ["AA", "IH"],
@@ -26,28 +26,26 @@ def expand_phoneme(phoneme):
     Expands a phoneme to potentially multiple phonemes. Used to map diphthongs
     to its monophthongs in series.
     """
-    return _diphthong_pairs.get(phoneme, [phoneme])
+    return diphthong_pairs.get(phoneme, [phoneme])
 
 
 def word_to_phonemes(word):
     """
     Maps a single word onto a series of possible pronunciation. Each
     pronunciation is a series of phonemes, represented in the format provided
-    by CMU Dict. See http://www.speech.cs.cmu.edu/cgi-bin/cmudict for reference
+    by CMU Dict. See http://www.speech.cs.cmu.edu/cgi-bin/cmudict for
+    reference.
     """
-    return [
-        reduce(
-            lambda x, y: x + y,
-            [
-                _expand_phoneme(
-                    # Stripping stress markers from words
-                    re.sub(r"\d+", "", phoneme)
-                )
-                for phoneme in pronunciation
-            ],
-        )
-        for pronunciation in _cmudict_cache[word]
-    ]
+    source_pronunciations = cmudict_cache[word]
+    pronunciations = []
+
+    for source_pronunciation in source_pronunciations:
+        pronunciation = []
+        for phoneme in source_pronunciation:
+            pronunciation += expand_phoneme(re.sub(r"\d+", "", phoneme))
+        pronunciations.append(pronunciation)
+
+    return pronunciations
 
 
 def word_to_feature_matrix(word):
@@ -56,7 +54,12 @@ def word_to_feature_matrix(word):
     pronunciation.
     """
     pronunciations = word_to_phonemes(word)
-    return [
-        [features[phoneme] for phoneme in pronunciation]
-        for pronunciation in pronunciations
-    ]
+    feature_matrices = []
+
+    for pronunciation in pronunciations:
+        feature_matrix = []
+        for phoneme in pronunciation:
+            feature_matrix.append(features[phoneme])
+        feature_matrices.append(feature_matrix)
+
+    return feature_matrices
