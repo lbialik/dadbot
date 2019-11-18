@@ -101,9 +101,11 @@ def phonemic_distance(phon1, phon2):
     dist = 0
     feats1 = features[phon1]
     feats2 = features[phon2]
+    total_weight = 0
     for f1 in feature_weights:
         dist += feature_weights[f1] * abs(values[feats1[f1]] - values[feats2[f1]])
-    return dist / (float(len(list(feats1))))
+        total_weight += feature_weights[f1]
+    return dist / (float(total_weight))
 
 
 def ins_cost(phon, idx):
