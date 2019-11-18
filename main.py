@@ -6,7 +6,7 @@ def main(argv):
     word_similarity_map = semantics.TwitterGloveSimilarWordMap()
     while True:
         word = input("> ")
-        for similar in word_similarity_map.get_similar_words(word, 5):
+        for similar in word_similarity_map.get_similar_words(word, 10):
             print("    {}".format(similar))
 
 

@@ -21,12 +21,6 @@ class SimilarWordMap:
         """
         raise NotImplementedError()
 
-    def get_distance(self, source_word, target_word):
-        """
-        Returns the distance between the source and target words in the vector space.
-        """
-        raise NotImplementedError()
-
 
 class FastTextSimilarWordMap(SimilarWordMap):
     DOWNLOAD_LINK = "https://dl.fbaipublicfiles.com/fasttext/vectors-english/wiki-news-300d-1M.vec.zip"
@@ -56,9 +50,6 @@ class FastTextSimilarWordMap(SimilarWordMap):
     def get_similar_words(self, word, count):
         return self.model.similar_by_word(word, topn=count)
 
-    def get_distance(self, source_word, target_word):
-        return self.model.similarity(source_word, target_word)
-
 
 class TwitterGloveSimilarWordMap(SimilarWordMap):
     def __init__(self):
@@ -69,6 +60,3 @@ class TwitterGloveSimilarWordMap(SimilarWordMap):
 
     def get_similar_words(self, word, count):
         return self.model.most_similar(word, topn=count)
-
-    def get_distance(self, source_word, target_word):
-        return self.model.similarity(source_word, target_word)
