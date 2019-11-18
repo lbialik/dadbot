@@ -2,7 +2,7 @@ import cmudict
 from functools import reduce
 import re
 
-from features import features
+from features import features, feature_weights
 
 
 # We store the cmudict as an object in memory so that we don't have to reload
@@ -101,8 +101,8 @@ def phonemic_distance(phon1, phon2):
     dist = 0
     feats1 = features[phon1]
     feats2 = features[phon2]
-    for f1 in feats1:
-        dist += abs(values[feats1[f1]] - values[feats2[f1]])
+    for f1 in feature_weights:
+        dist += feature_weights[f1] * abs(values[feats1[f1]] - values[feats2[f1]])
     return dist / (float(len(list(feats1))))
 
 
