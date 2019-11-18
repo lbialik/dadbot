@@ -38,3 +38,6 @@ This process will help us avoid some of the pitfalls groups run into when they c
 
 1. It will make sure we maintain high quality code so that it doesn't become cumbersome to work on.
 2. It will make sure we are more aware of what each person is working on, so we don't accidentally step on each others' toes.
+
+#### Tests
+You can create tests in test_features.py and add them to the run_tests function. To run the suite you can just run the command 'python -m tests'
