@@ -19,3 +19,8 @@ def test_has_all_phonemes():
     # Because they are all either diphthongs (which we map to monophthongs), or
     # for "ER" it's literally just the "R" sound.
     assert missing_phonemes == set(["AW", "AY", "ER", "EY", "OW", "OY"])
+
+
+def run_tests():
+    test_has_all_phonemes()
+    print("All tests passed!")
