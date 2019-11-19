@@ -2,7 +2,7 @@ import cmudict
 from functools import reduce
 import re
 
-from features import features, feature_weights
+from lib.features import features, feature_weights
 
 
 # We store the cmudict as an object in memory so that we don't have to reload
