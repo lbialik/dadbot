@@ -1,3 +1,32 @@
+feature_weights = {
+    "syllabic": 1,
+    "consonantal": 1,
+    "approximant": 1,
+    "sonorant": 1,
+    "continuant": 1,
+    "delayed release": 1,
+    "tap": 1,
+    "trill": 1,
+    "nasal": 1,
+    "lateral": 1,
+    "voice": 1,
+    "spread gl": 1,
+    "constr gl": 1,
+    "labial": 1,
+    "round": 1,
+    "labiodental": 1,
+    "coronal": 1,
+    "anterior": 1,
+    "distributed": 1,
+    "strident": 1,
+    "dorsal": 1,
+    "high": 1,
+    "low": 1,
+    "front": 1,
+    "back": 1,
+    "tense": 1,
+}
+
 features = {
     "P": {
         "syllabic": "-",
