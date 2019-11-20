@@ -1,4 +1,6 @@
 import sys
+import traceback
+
 import lib.puns as puns
 
 
@@ -12,8 +14,8 @@ def main(argv):
             print(punner.punnify(topic, sentence))
         except (EOFError, KeyboardInterrupt):
             break
-        except Exception:
-            continue
+        except Exception as e:
+            traceback.print_exception(type(e), e, e.__traceback__)
     print()
 
 

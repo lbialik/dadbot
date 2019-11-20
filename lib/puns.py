@@ -59,8 +59,10 @@ class Punner:
         """
         topic = self.tokenize(topic)[0]
         sentence = self.tokenize(sentence)
-        candidate_words = self.word_vector_model.get_similar_words(
-            topic, self.config.similar_word_count
+        candidate_words = self.normalize_similarity_range(
+            self.word_vector_model.get_similar_words(
+                topic, self.config.similar_word_count
+            )
         )
 
         # Calculates the best words to replace with for each position in the
@@ -131,3 +133,28 @@ class Punner:
         capitalizes the first word and adds a period to the end.
         """
         return " ".join(tokens).capitalize() + "."
+
+    def normalize_similarity_range(self, candidate_words):
+        """
+        Given a list of candidate words, normalize the similarity metric
+        between them from whatever their range is to [0, 1].
+        """
+        min_sim, max_sim = self.get_similarity_range(candidate_words)
+        return [
+            (candidate_word, (sim - min_sim) / (max_sim - min_sim))
+            for (candidate_word, sim) in candidate_words
+        ]
+
+    def get_similarity_range(self, candidate_words):
+        """
+        Gets the maximum and minimum values of similarity in a list of
+        candidate words.
+        """
+        min_sim = 1
+        max_sim = 0
+        for (_, sim) in candidate_words:
+            if sim < min_sim:
+                min_sim = sim
+            if sim > max_sim:
+                max_sim = sim
+        return (min_sim, max_sim)
