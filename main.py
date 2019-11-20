@@ -11,8 +11,8 @@ def main(argv):
             print(punner.punnify(topic, sentence))
         except (EOFError, KeyboardInterrupt):
             break
-        except Exception:
-            print("EXCEPTION")
+        except Exception as e:
+            print(e)
     print()
 
 
