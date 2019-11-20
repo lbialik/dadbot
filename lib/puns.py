@@ -67,24 +67,24 @@ class Punner:
         # sentence
         best_words = [("", sys.float_info.max)] * len(sentence)
         for i in range(len(sentence)):
-            # Skipping stopwords
-            if sentence[i] in preprocessing.STOPWORDS:
-                continue
-
-            # Skipping words in the sentence that have no pronunciation
+            # Skipping stopwords and words that have no pronunciation
             sentence_word_phonemes = pronunciation.word_to_phonemes(sentence[i])
-            if len(sentence_word_phonemes) == 0:
+            if (
+                len(sentence_word_phonemes) == 0
+                or sentence[i] in preprocessing.STOPWORDS
+            ):
                 continue
             sentence_word_phonemes = sentence_word_phonemes[0]
 
             for (candidate_word, semantic_similarity) in candidate_words:
-                # Skipping stopwords
-                if candidate_word in preprocessing.STOPWORDS:
-                    continue
-
-                # Skipping candidate words that have no pronuncuation
+                # Skipping stopwords, words that have no pronunciation, and
+                # words that are equal to the word we already have.
                 candidate_word_phonemes = pronunciation.word_to_phonemes(candidate_word)
-                if len(candidate_word_phonemes) == 0:
+                if (
+                    len(candidate_word_phonemes) == 0
+                    or candidate_word in preprocessing.STOPWORDS
+                    or candidate_word == sentence[i]
+                ):
                     continue
                 candidate_word_phonemes = candidate_word_phonemes[0]
 
