@@ -78,6 +78,10 @@ class Punner:
             sentence_word_phonemes = sentence_word_phonemes[0]
 
             for (candidate_word, semantic_similarity) in candidate_words:
+                # Skipping stopwords
+                if candidate_word in preprocessing.STOPWORDS:
+                    continue
+
                 # Skipping candidate words that have no pronuncuation
                 candidate_word_phonemes = pronunciation.word_to_phonemes(candidate_word)
                 if len(candidate_word_phonemes) == 0:
