@@ -1,13 +1,20 @@
 import sys
-import lib.semantics as semantics
+import lib.puns as puns
 
 
 def main(argv):
-    word_similarity_map = semantics.TwitterGloveSimilarWordMap()
+    punner = puns.Punner(config=puns.PunnerConfig())
     while True:
-        word = input("> ")
-        for similar in word_similarity_map.get_similar_words(word, 10):
-            print("    {}".format(similar))
+        try:
+            topic = input("Topic > ")
+            sentence = input("Sentence > ")
+
+            print(punner.punnify(topic, sentence))
+        except (EOFError, KeyboardInterrupt):
+            break
+        except Exception:
+            continue
+    print()
 
 
 if __name__ == "__main__":
