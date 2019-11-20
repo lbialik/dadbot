@@ -1,3 +1,4 @@
+import gensim.parsing.preprocessing as preprocessing
 import math
 import queue
 import sys
@@ -14,7 +15,7 @@ class PunnerConfig:
     """
 
     DEFAULT_WORD_VECTOR_MODEL = semantics.TwitterGloveSimilarWordMap
-    DEFAULT_SIMILAR_WORD_COUNT = 30
+    DEFAULT_SIMILAR_WORD_COUNT = 200
     DEFAULT_PHONOLOGY_WEIGHT = 1.0
     DEFAULT_SEMANTIC_WEIGHT = 1.0
     DEFAULT_REPLACE_COUNT = 1
@@ -66,14 +67,30 @@ class Punner:
         # sentence
         best_words = [("", sys.float_info.max)] * len(sentence)
         for i in range(len(sentence)):
+            # Skipping stopwords
+            if sentence[i] in preprocessing.STOPWORDS:
+                continue
+
+            # Skipping words in the sentence that have no pronunciation
+            sentence_word_phonemes = pronunciation.word_to_phonemes(sentence[i])
+            if len(sentence_word_phonemes) == 0:
+                continue
+            sentence_word_phonemes = sentence_word_phonemes[0]
+
             for (candidate_word, semantic_similarity) in candidate_words:
+                # Skipping candidate words that have no pronuncuation
+                candidate_word_phonemes = pronunciation.word_to_phonemes(candidate_word)
+                if len(candidate_word_phonemes) == 0:
+                    continue
+                candidate_word_phonemes = candidate_word_phonemes[0]
+
                 phonology_cost = pronunciation.word_phonemic_distance(
                     # TODO: One of:
                     #   1) Search over all pronunciations
                     #   2) Find out if there's a pattern about American vs.
                     #      British, and always choose American.
-                    pronunciation.word_to_phonemes(sentence[i])[0],
-                    pronunciation.word_to_phonemes(candidate_word)[0],
+                    sentence_word_phonemes,
+                    candidate_word_phonemes,
                 )
                 semantic_cost = 1 - semantic_similarity
 
