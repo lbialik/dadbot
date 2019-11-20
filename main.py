@@ -4,15 +4,17 @@ import lib.puns as puns
 
 def main(argv):
     punner = puns.Punner(config=puns.PunnerConfig())
-    try:
-        while True:
+    while True:
+        try:
             topic = input("Topic > ")
             sentence = input("Sentence > ")
 
             print(punner.punnify(topic, sentence))
-    except (EOFError, KeyboardInterrupt):
-        print()
-        return
+        except (EOFError, KeyboardInterrupt):
+            break
+        except Exception:
+            continue
+    print()
 
 
 if __name__ == "__main__":

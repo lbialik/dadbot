@@ -14,10 +14,10 @@ class PunnerConfig:
     """
 
     DEFAULT_WORD_VECTOR_MODEL = semantics.TwitterGloveSimilarWordMap
-    DEFAULT_SIMILAR_WORD_COUNT = 10
+    DEFAULT_SIMILAR_WORD_COUNT = 30
     DEFAULT_PHONOLOGY_WEIGHT = 1.0
     DEFAULT_SEMANTIC_WEIGHT = 1.0
-    DEFAULT_REPLACE_PERCENTAGE = 0.3
+    DEFAULT_REPLACE_COUNT = 1
 
     def __init__(self, **kwargs):
         # The word vector model we want to use.
@@ -40,10 +40,8 @@ class PunnerConfig:
             "semantic_weigth", self.DEFAULT_SEMANTIC_WEIGHT
         )
 
-        # The percentage of the sentence we replace with candidate words.
-        self.replace_percentage = kwargs.get(
-            "replace_percentage", self.DEFAULT_REPLACE_PERCENTAGE
-        )
+        # The count of the sentence we replace with candidate words.
+        self.replace_count = kwargs.get("replace_count", self.DEFAULT_REPLACE_COUNT)
 
 
 class Punner:
@@ -74,8 +72,8 @@ class Punner:
                     #   1) Search over all pronunciations
                     #   2) Find out if there's a pattern about American vs.
                     #      British, and always choose American.
-                    pronunciation.word_to_feature_matrix(sentence[i])[0],
-                    pronunciation.word_to_feature_matrix(candidate_word)[0],
+                    pronunciation.word_to_phonemes(sentence[i])[0],
+                    pronunciation.word_to_phonemes(candidate_word)[0],
                 )
                 semantic_cost = 1 - semantic_similarity
 
@@ -84,26 +82,17 @@ class Punner:
                 )
 
                 if cost < best_words[i][1]:
-                    best_words[i][0] = candidate_word
-                    best_words[i][1] = cost
+                    best_words[i] = (candidate_word, cost)
 
         # Calculating the actual indices that we should replace
-        replacement_count = math.ceil(self.config.replace_percentage * len(sentence))
-        pqueue = queue.PriorityQueue(replacement_count)
-        for (i, (best_word, cost)) in enumerate(best_words):
-            pqueue.put((cost, i, best_word))
+        replace_count = self.config.replace_count
+        replacements = sorted(enumerate(best_words), key=lambda group: group[1][1])[
+            :replace_count
+        ]
 
         # Replacing words in the sentence
-        for (_, i, best_word) in pqueue:
-            sentences[i] = best_word
-
-        # TODO: Remove after debugging
-        print("Topic:", topic)
-        print("Sentence:", sentence)
-        print("Candidates:", candidate_words)
-        print("Best Words:", best_words)
-        print("Repl Count:", replacement_count)
-        print("PQueue:", pqueue)
+        for (i, (best_word, _)) in replacements:
+            sentence[i] = best_word
 
         return self.untokenize(sentence)
 
