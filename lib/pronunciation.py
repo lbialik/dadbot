@@ -135,21 +135,21 @@ def phonemic_distance(phon1, phon2):
     return dist / (float(total_weight))
 
 
-def ins_cost(phon, idx):
+def ins_cost(phon):
     """
     Returns cost of inserting a given phoneme and index
     """
     return 1
 
 
-def del_cost(phon, idx):
+def del_cost(phon):
     """
     Returns cost of deleting a given phoneme and index
     """
     return 1
 
 
-def sub_cost(phon1, phon2, idx1, idx2):
+def sub_cost(phon1, phon2):
     """
     Returns cost of replacing a given phoneme with another at given indices
     """
