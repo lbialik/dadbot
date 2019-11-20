@@ -6,6 +6,15 @@ NLP project to generate puns from topic words and sentences!
 
 **TODO: More**
 
+## Running
+
+```bash
+# Make sure you have Python 3.7 installed, or a virtual environment that provides it
+
+$ python server.py # Run the word vector server
+$ python main.py # Run the pun generator
+```
+
 ## Contributing
 
 #### Set Up
