@@ -13,8 +13,8 @@ class PunnerConfig:
     Provides configuration for the Punner class. Lets us easily change
     hyperparameters when constructing the class.
     """
-
-    DEFAULT_WORD_VECTOR_MODEL = semantics.TwitterGloveSimilarWordMap
+    
+    DEFAULT_WORD_VECTOR_MODEL = semantics.ServerSimilarWordMap
     DEFAULT_SIMILAR_WORD_COUNT = 200
     DEFAULT_PHONOLOGY_WEIGHT = 1.0
     DEFAULT_SEMANTIC_WEIGHT = 1.0

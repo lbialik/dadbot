@@ -1,8 +1,10 @@
 import gensim.downloader as api
 from gensim.models import KeyedVectors
 from gensim.models.fasttext import load_facebook_model
+import json
 import os
 import os.path as path
+import requests
 import sys
 import urllib.request as request
 import zipfile
@@ -60,3 +62,21 @@ class TwitterGloveSimilarWordMap(SimilarWordMap):
 
     def get_similar_words(self, word, count):
         return self.model.most_similar(word, topn=count)
+
+
+class ServerSimilarWordMap(SimilarWordMap):
+    SERVER_HOST = "127.0.0.1"
+    SERVER_PORT = 8080
+
+    def __init__(self):
+        assert b"OK!" == self.__request("healthcheck")
+
+    def get_similar_words(self, word, count):
+        data = json.loads(self.__request(path.join("similar_words", word, str(count))))
+
+        return [(datum[0], datum[1]) for datum in data]
+
+    def __request(self, url):
+        return requests.get(
+            path.join("http://{}:{}".format(self.SERVER_HOST, self.SERVER_PORT), url)
+        ).content

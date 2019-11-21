@@ -10,7 +10,6 @@ def main(argv):
         try:
             topic = input("Topic > ")
             sentence = input("Sentence > ")
-
             print(punner.punnify(topic, sentence))
         except (EOFError, KeyboardInterrupt):
             break

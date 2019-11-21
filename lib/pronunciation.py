@@ -65,32 +65,59 @@ def word_to_feature_matrix(word):
     return feature_matrices
 
 
-def word_phonemic_distance(source, target):
+def word_phonemic_distance(source="", target="", verbose=False):
     """
-    Takes two lists of phonemes, returns a distance score between two words
-    based on Levenshtein distance, using feature matrices for weights.
+    Takes in two words in phonemic representation, returns a distance score
     """
     m = len(source)
     n = len(target)
 
     dist = [[0] * (m + 1) for i in range(n + 1)]
 
-    for i in range(n + 1):
-        for j in range(m + 1):
-            d_cost = float(del_cost(source[j - 1], j - 1))
-            i_cost = float(ins_cost(target[i - 1], i - 1))
-            s_cost = float(sub_cost(source[j - 1], target[i - 1], j - 1, i - 1))
-            i_cost = (
-                i_cost * 2 * (float(i) / n)
-            )  # sounds at the end are given more weight
-            d_cost = d_cost * 2 * (float(j) / m)
-            s_cost = s_cost * 2 * (float(j + i) / (m + n))
-            dist[i][j] = min(
-                dist[i - 1][j] + i_cost,
-                dist[i][j - 1] + d_cost,
-                dist[i - 1][j - 1] + s_cost,
-            )
-    return dist[i][j]
+    for i in range(n + 1):  # iterates over target
+        for j in range(m + 1):  # iterates over source
+            if i == 0:
+                if j > 0:
+                    dist[i][j] = dist[i][j - 1] + del_cost(source[j - 1]) * 2 * (
+                        float(j) / m
+                    )  # sounds at the end are given more weight
+                else:
+                    dist[i][j] = 0
+            elif j == 0:
+                dist[i][j] = dist[i - 1][j] + ins_cost(target[i - 1]) * 2 * (
+                    float(i) / n
+                )  # sounds at the end are given more weight
+            else:
+                d_cost = float(del_cost(source[j - 1]))
+                i_cost = float(ins_cost(target[i - 1]))
+                s_cost = float(sub_cost(source[j - 1], target[i - 1]))
+                i_cost = (
+                    i_cost * 2 * (float(i) / n)
+                )  # sounds at the end are given more weight
+                d_cost = d_cost * 2 * (float(j) / m)
+                s_cost = s_cost * 2 * (float(j + i) / (m + n))
+
+                dist[i][j] = min(
+                    dist[i - 1][j] + i_cost,
+                    dist[i][j - 1] + d_cost,
+                    dist[i - 1][j - 1] + s_cost,
+                )
+
+    ## if verbose is set to True, will print out the min_edit table
+    if verbose:
+        # print the matrix
+        for j in range(m + 1)[::-1]:
+            if j > 0:
+                print(source[j - 1])
+            else:
+                print("#")
+            for i in range(n + 1):
+                print("\t" + str(dist[i][j]))
+            print()
+        print("#\t#\t" + "\t".join(list(target)) + "\n")
+
+    # returns the cost for the full transformation
+    return dist[n][m]
 
 
 def phonemic_distance(phon1, phon2):
@@ -108,21 +135,21 @@ def phonemic_distance(phon1, phon2):
     return dist / (float(total_weight))
 
 
-def ins_cost(phon, idx):
+def ins_cost(phon):
     """
     Returns cost of inserting a given phoneme and index
     """
     return 1
 
 
-def del_cost(phon, idx):
+def del_cost(phon):
     """
     Returns cost of deleting a given phoneme and index
     """
     return 1
 
 
-def sub_cost(phon1, phon2, idx1, idx2):
+def sub_cost(phon1, phon2):
     """
     Returns cost of replacing a given phoneme with another at given indices
     """
