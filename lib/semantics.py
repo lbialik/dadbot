@@ -58,7 +58,7 @@ class TwitterGloveSimilarWordMap(SimilarWordMap):
         """
         Upon constructing this class, it loads up the Twitter GloVe word embeddings.
         """
-        self.model = api.load("glove-twitter-25")
+        self.model = api.load("glove-twitter-200")
 
     def get_similar_words(self, word, count):
         return self.model.most_similar(word, topn=count)

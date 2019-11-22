@@ -1,3 +1,4 @@
+import gensim.parsing.preprocessing as preprocessing
 import math
 import queue
 import sys
@@ -12,9 +13,9 @@ class PunnerConfig:
     Provides configuration for the Punner class. Lets us easily change
     hyperparameters when constructing the class.
     """
-
+    
     DEFAULT_WORD_VECTOR_MODEL = semantics.ServerSimilarWordMap
-    DEFAULT_SIMILAR_WORD_COUNT = 30
+    DEFAULT_SIMILAR_WORD_COUNT = 200
     DEFAULT_PHONOLOGY_WEIGHT = 1.0
     DEFAULT_SEMANTIC_WEIGHT = 1.0
     DEFAULT_REPLACE_COUNT = 1
@@ -58,22 +59,44 @@ class Punner:
         """
         topic = self.tokenize(topic)[0]
         sentence = self.tokenize(sentence)
-        candidate_words = self.word_vector_model.get_similar_words(
-            topic, self.config.similar_word_count
+        candidate_words = self.normalize_similarity_range(
+            self.word_vector_model.get_similar_words(
+                topic, self.config.similar_word_count
+            )
         )
 
         # Calculates the best words to replace with for each position in the
         # sentence
         best_words = [("", sys.float_info.max)] * len(sentence)
         for i in range(len(sentence)):
+            # Skipping stopwords and words that have no pronunciation
+            sentence_word_phonemes = pronunciation.word_to_phonemes(sentence[i])
+            if (
+                len(sentence_word_phonemes) == 0
+                or sentence[i] in preprocessing.STOPWORDS
+            ):
+                continue
+            sentence_word_phonemes = sentence_word_phonemes[0]
+
             for (candidate_word, semantic_similarity) in candidate_words:
+                # Skipping stopwords, words that have no pronunciation, and
+                # words that are equal to the word we already have.
+                candidate_word_phonemes = pronunciation.word_to_phonemes(candidate_word)
+                if (
+                    len(candidate_word_phonemes) == 0
+                    or candidate_word in preprocessing.STOPWORDS
+                    or candidate_word == sentence[i]
+                ):
+                    continue
+                candidate_word_phonemes = candidate_word_phonemes[0]
+
                 phonology_cost = pronunciation.word_phonemic_distance(
                     # TODO: One of:
                     #   1) Search over all pronunciations
                     #   2) Find out if there's a pattern about American vs.
                     #      British, and always choose American.
-                    pronunciation.word_to_phonemes(sentence[i])[0],
-                    pronunciation.word_to_phonemes(candidate_word)[0],
+                    sentence_word_phonemes,
+                    candidate_word_phonemes,
                 )
                 semantic_cost = 1 - semantic_similarity
 
@@ -110,3 +133,28 @@ class Punner:
         capitalizes the first word and adds a period to the end.
         """
         return " ".join(tokens).capitalize() + "."
+
+    def normalize_similarity_range(self, candidate_words):
+        """
+        Given a list of candidate words, normalize the similarity metric
+        between them from whatever their range is to [0, 1].
+        """
+        min_sim, max_sim = self.get_similarity_range(candidate_words)
+        return [
+            (candidate_word, (sim - min_sim) / (max_sim - min_sim))
+            for (candidate_word, sim) in candidate_words
+        ]
+
+    def get_similarity_range(self, candidate_words):
+        """
+        Gets the maximum and minimum values of similarity in a list of
+        candidate words.
+        """
+        min_sim = 1
+        max_sim = 0
+        for (_, sim) in candidate_words:
+            if sim < min_sim:
+                min_sim = sim
+            if sim > max_sim:
+                max_sim = sim
+        return (min_sim, max_sim)

@@ -1,4 +1,6 @@
 import sys
+import traceback
+
 import lib.puns as puns
 
 
@@ -12,7 +14,7 @@ def main(argv):
         except (EOFError, KeyboardInterrupt):
             break
         except Exception as e:
-            print(e)
+            traceback.print_exception(type(e), e, e.__traceback__)
     print()
 
 
