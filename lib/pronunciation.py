@@ -13,7 +13,7 @@ cmudict_cache = cmudict.dict()
 # Maps from diphthongs to their monophthonic parts. Also "ER" for no reason.
 diphthong_pairs = {
     "AW": ["AE", "UH"],
-    "AY": ["AA", "IH"],
+    "AY": ["AE", "IH"],
     "ER": ["R"],
     "EY": ["E", "IH"],
     "OW": ["O", "UH"],
@@ -46,23 +46,6 @@ def word_to_phonemes(word):
         pronunciations.append(pronunciation)
 
     return pronunciations
-
-
-def word_to_feature_matrix(word):
-    """
-    Maps a single word onto a series of feature matrices, one for each
-    pronunciation.
-    """
-    pronunciations = word_to_phonemes(word)
-    feature_matrices = []
-
-    for pronunciation in pronunciations:
-        feature_matrix = []
-        for phoneme in pronunciation:
-            feature_matrix.append(features[phoneme])
-        feature_matrices.append(feature_matrix)
-
-    return feature_matrices
 
 
 def word_phonemic_distance(source="", target="", verbose=False):

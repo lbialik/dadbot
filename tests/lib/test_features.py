@@ -20,16 +20,3 @@ def test_has_all_phonemes():
     # Because they are all either diphthongs (which we map to monophthongs), or
     # for "ER" it's literally just the "R" sound.
     assert missing_phonemes == set(["AW", "AY", "ER", "EY", "OW", "OY"])
-
-
-def test_phonemic_levenshtein():
-    assert (
-        word_phonemic_distance(word_to_phonemes("reed")[0], word_to_phonemes("read")[1])
-        == 0
-    )
-
-
-def run_tests():
-    test_has_all_phonemes()
-    test_phonemic_levenshtein()
-    print("All tests passed!")
