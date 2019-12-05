@@ -62,7 +62,7 @@ def word_phonemic_distance(source="", target="", verbose=False):
         for y in range(1, size_y):
             matrix[x, y] = min(
                 matrix[x - 1, y] + 1,
-                matrix[x - 1, y - 1] + sub_cost(source[x], target[y]),
+                matrix[x - 1, y - 1] + sub_cost(source[x - 1], target[y - 1]),
                 matrix[x, y - 1] + 1,
             )
     if verbose:
