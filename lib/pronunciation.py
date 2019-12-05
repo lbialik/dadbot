@@ -61,9 +61,9 @@ def word_phonemic_distance(source="", target="", verbose=False):
     for x in range(1, size_x):
         for y in range(1, size_y):
             matrix[x, y] = min(
-                matrix[x - 1, y] + 1,
+                matrix[x - 1, y] + ins_cost(target[y - 1]),
                 matrix[x - 1, y - 1] + sub_cost(source[x - 1], target[y - 1]),
-                matrix[x, y - 1] + 1,
+                matrix[x, y - 1] + del_cost(source[x - 1]),
             )
     if verbose:
         print(matrix)
@@ -89,6 +89,8 @@ def ins_cost(phon):
     """
     Returns cost of inserting a given phoneme and index
     """
+    if features[phon]["syllabic"] == "+":
+        return 2
     return 1
 
 
@@ -96,6 +98,8 @@ def del_cost(phon):
     """
     Returns cost of deleting a given phoneme and index
     """
+    if features[phon]["syllabic"] == "+":
+        return 2
     return 1
 
 
