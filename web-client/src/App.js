@@ -25,10 +25,17 @@ class App extends React.Component {
     const xhr = new XMLHttpRequest();
 
     xhr.onload = () => {
-      this.setState({
-        output: JSON.parse(xhr.response).sentence,
-        loading: false,
-      });
+      try {
+        this.setState({
+          output: JSON.parse(xhr.response).sentence,
+          loading: false,
+        });
+      } catch {
+        this.setState({
+          output: 'Error!',
+          loading: false,
+        });
+      }
     };
 
     xhr.open('POST', url);
@@ -60,7 +67,7 @@ class App extends React.Component {
           <div className="subtitle">Computationally Generated Puns</div>
         </div>
 
-        <div className="contents">
+        <form className="contents">
           <div>
             <input
               value={this.state.topic}
@@ -79,12 +86,12 @@ class App extends React.Component {
             />
           </div>
 
-          <div>
             <button onClick={this.punnify} disabled={this.state.loading}>
               Punnify
             </button>
-          </div>
+        </form>
 
+        <div className="contents">
           <div>
             <div className="more-like">more like...</div>
             <input
