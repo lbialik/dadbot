@@ -60,14 +60,11 @@ def word_phonemic_distance(source="", target="", verbose=False):
 
     for x in range(1, size_x):
         for y in range(1, size_y):
-            if source[x - 1] == target[y - 1]:
-                matrix[x, y] = min(
-                    matrix[x - 1, y] + 1, matrix[x - 1, y - 1], matrix[x, y - 1] + 1
-                )
-            else:
-                matrix[x, y] = min(
-                    matrix[x - 1, y] + 1, matrix[x - 1, y - 1] + 1, matrix[x, y - 1] + 1
-                )
+            matrix[x, y] = min(
+                matrix[x - 1, y] + 1,
+                matrix[x - 1, y - 1] + sub_cost(source[x], target[y]),
+                matrix[x, y - 1] + 1,
+            )
     if verbose:
         print(matrix)
     return matrix[size_x - 1, size_y - 1]
