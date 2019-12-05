@@ -1,6 +1,7 @@
 import cmudict
 from functools import reduce
 import re
+import numpy as np
 
 from lib.features import features, feature_weights
 
@@ -49,58 +50,27 @@ def word_to_phonemes(word):
 
 
 def word_phonemic_distance(source="", target="", verbose=False):
-    """
-    Takes in two words in phonemic representation, returns a distance score
-    """
-    m = len(source)
-    n = len(target)
+    size_x = len(source) + 1
+    size_y = len(target) + 1
+    matrix = np.zeros((size_x, size_y))
+    for x in range(size_x):
+        matrix[x, 0] = x
+    for y in range(size_y):
+        matrix[0, y] = y
 
-    dist = [[0] * (m + 1) for i in range(n + 1)]
-
-    for i in range(n + 1):  # iterates over target
-        for j in range(m + 1):  # iterates over source
-            if i == 0:
-                if j > 0:
-                    dist[i][j] = dist[i][j - 1] + del_cost(source[j - 1]) * 2 * (
-                        float(j) / m
-                    )  # sounds at the end are given more weight
-                else:
-                    dist[i][j] = 0
-            elif j == 0:
-                dist[i][j] = dist[i - 1][j] + ins_cost(target[i - 1]) * 2 * (
-                    float(i) / n
-                )  # sounds at the end are given more weight
-            else:
-                d_cost = float(del_cost(source[j - 1]))
-                i_cost = float(ins_cost(target[i - 1]))
-                s_cost = float(sub_cost(source[j - 1], target[i - 1]))
-                i_cost = (
-                    i_cost * 2 * (float(i) / n)
-                )  # sounds at the end are given more weight
-                d_cost = d_cost * 2 * (float(j) / m)
-                s_cost = s_cost * 2 * (float(j + i) / (m + n))
-
-                dist[i][j] = min(
-                    dist[i - 1][j] + i_cost,
-                    dist[i][j - 1] + d_cost,
-                    dist[i - 1][j - 1] + s_cost,
+    for x in range(1, size_x):
+        for y in range(1, size_y):
+            if source[x - 1] == target[y - 1]:
+                matrix[x, y] = min(
+                    matrix[x - 1, y] + 1, matrix[x - 1, y - 1], matrix[x, y - 1] + 1
                 )
-
-    ## if verbose is set to True, will print out the min_edit table
-    if verbose:
-        # print the matrix
-        for j in range(m + 1)[::-1]:
-            if j > 0:
-                print(source[j - 1])
             else:
-                print("#")
-            for i in range(n + 1):
-                print("\t" + str(dist[i][j]))
-            print()
-        print("#\t#\t" + "\t".join(list(target)) + "\n")
-
-    # returns the cost for the full transformation
-    return dist[n][m]
+                matrix[x, y] = min(
+                    matrix[x - 1, y] + 1, matrix[x - 1, y - 1] + 1, matrix[x, y - 1] + 1
+                )
+    if verbose:
+        print(matrix)
+    return matrix[size_x - 1, size_y - 1]
 
 
 def phonemic_distance(phon1, phon2):
