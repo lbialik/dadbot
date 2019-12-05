@@ -1,12 +1,14 @@
 from flask import Flask
 from flask import request
 from flask import Response
+from flask_cors import CORS
 import json
 
 from lib import puns
 from lib import semantics
 
 app = Flask(__name__)
+CORS(app)
 model = semantics.TwitterGloveSimilarWordMap()
 
 
@@ -38,7 +40,7 @@ def generate_pun():
     """
     Generates a pun given a topic and a sentence.
     """
-    punner = puns.Punner()
+    punner = puns.Punner(config=puns.PunnerConfig())
 
     resp = Response(
         json.dumps(

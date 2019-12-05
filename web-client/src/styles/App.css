@@ -80,6 +80,10 @@ button:focus {
   outline: none;
 }
 
+button:disabled {
+  background: #b15353;
+}
+
 .more-like {
   font-size: 1.8rem;
 }
