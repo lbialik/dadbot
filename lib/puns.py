@@ -13,7 +13,7 @@ class PunnerConfig:
     Provides configuration for the Punner class. Lets us easily change
     hyperparameters when constructing the class.
     """
-    
+
     DEFAULT_WORD_VECTOR_MODEL = semantics.ServerSimilarWordMap
     DEFAULT_SIMILAR_WORD_COUNT = 200
     DEFAULT_PHONOLOGY_WEIGHT = 1.0
@@ -114,10 +114,12 @@ class Punner:
         ]
 
         # Replacing words in the sentence
-        for (i, (best_word, _)) in replacements:
+        costs = []
+        for (i, (best_word, cost)) in replacements:
+            costs.append((best_word, cost))
             sentence[i] = best_word
 
-        return self.untokenize(sentence)
+        return self.untokenize(sentence), costs
 
     def tokenize(self, string):
         """
