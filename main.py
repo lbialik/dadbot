@@ -10,7 +10,10 @@ def main(argv):
         try:
             topic = input("Topic > ")
             sentence = input("Sentence > ")
-            print(punner.punnify(topic, sentence))
+
+            pun, costs = punner.punnify(topic, sentence)
+            print(pun)
+            print(costs)
         except (EOFError, KeyboardInterrupt):
             break
         except Exception as e:
