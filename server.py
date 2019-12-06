@@ -42,15 +42,8 @@ def generate_pun():
     """
     punner = puns.Punner(config=puns.PunnerConfig())
 
-    resp = Response(
-        json.dumps(
-            {
-                "sentence": punner.punnify(
-                    request.json["topic"], request.json["sentence"]
-                )
-            }
-        )
-    )
+    sentence, cost = punner.punnify(request.json["topic"], request.json["sentence"])
+    resp = Response(json.dumps({"sentence": sentence, "cost": cost}))
     resp.headers.add("Content-Type", "application/json")
 
     return resp
