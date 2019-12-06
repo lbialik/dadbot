@@ -90,8 +90,8 @@ def ins_cost(phon):
     Returns cost of inserting a given phoneme and index
     """
     if features[phon]["syllabic"] == "+":
-        return 2
-    return 1
+        return 1.5
+    return 0.75
 
 
 def del_cost(phon):
@@ -99,8 +99,8 @@ def del_cost(phon):
     Returns cost of deleting a given phoneme and index
     """
     if features[phon]["syllabic"] == "+":
-        return 2
-    return 1
+        return 1.5
+    return 0.75
 
 
 def sub_cost(phon1, phon2):
