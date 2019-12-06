@@ -9,10 +9,36 @@ NLP project to generate puns from topic words and sentences!
 ## Running
 
 ```bash
-# Make sure you have Python 3.7 installed, or a virtual environment that provides it
+# First, make sure you have Python 3.7 installed. Prefferably install a virtual
+# environment, but you do you.
 
-$ python server.py # Run the word vector server
-$ python main.py # Run the pun generator
+# Install Python requirements
+$ pip install -r requirements.txt
+
+# If you're interested in using the web UI, install the Node requirements.
+$ cd web-client
+$ npm install
+```
+
+### CLI
+
+```bash
+# Run the word vector server
+$ python server.py
+
+# In another window, run the pun generator
+$ python main.py
+```
+
+### Web
+
+```bash
+# Run the word vector
+$ python server.py
+
+# Run the web front-end, and navigate to localhost:3000
+$ cd web-client
+$ npm start
 ```
 
 ## Contributing

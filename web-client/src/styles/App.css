@@ -1,0 +1,89 @@
+.App {
+  align-content: center;
+  background: #34374f;
+  display: flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  height: 100vh;
+  justify-content: center;
+  text-align: center;
+  width: 100vw;
+}
+
+.title-section {
+  margin-bottom: 2rem;
+}
+
+.brain {
+  height: 4.0rem;
+  width: 4.0rem;
+  margin: 0rem 0.6rem;
+  vertical-align: middle;
+}
+
+.title {
+  font-size: 3.0rem;
+  vertical-align: middle;
+}
+
+.subtitle {
+  color: #bbb;
+  font-size: 2.2rem;
+}
+
+.contents {
+  text-align: left;
+  margin: 0px auto;
+}
+
+input[type=text] {
+  border-color: #545a80;
+  border-radius: 8px;
+  border-style: solid;
+  border-width: 2px;
+  color: #333333;
+  font-size: 1.4rem;
+  margin: 0.5rem;
+  padding: 0.5rem 1rem;
+  transition: box-shadow 0.3s;
+  width: 24rem;
+}
+
+input[type=text]:focus {
+  box-shadow: 0px 0px 10px #545a80;
+  transition: box-shadow 0.3s;
+  outline: none;
+}
+
+input[type=text]:disabled {
+  background-color: #eeeeee;
+}
+
+button {
+  background: #df6969;
+  border-radius: 4px;
+  border-style: none;
+  box-shadow: 0px 2px 0px #b15353;
+  color: #ffffff;
+  font-size: 1.4rem;
+  padding: 0.4rem 0.8rem;
+  margin: 0.5rem;
+}
+
+button:active {
+  background: #b15353;
+  box-shadow: none;
+  transform: translate(0, 2px);
+}
+
+button:focus {
+  outline: none;
+}
+
+button:disabled {
+  background: #b15353;
+}
+
+.more-like {
+  font-size: 1.8rem;
+}
