@@ -5,11 +5,15 @@ import './styles/App.css';
 const SERVER_HOST = 'localhost';
 const SERVER_PORT = 8080;
 
+const CUTOFF_GOOD_PUN = 1.0;
+const CUTOFF_OK_PUN = 1.5;
+
 class App extends React.Component {
   state = {
     topic: '',
     sentence: '',
     output: '',
+    cost: -1,
 
     loading: false,
   };
@@ -26,8 +30,16 @@ class App extends React.Component {
 
     xhr.onload = () => {
       try {
+        const json = JSON.parse(xhr.response);
+        let avgCost = 0;
+        for (let i = 0; i < json.cost.length; i++) {
+          avgCost += json.cost[i][1];
+        }
+        avgCost /= json.cost.length;
+
         this.setState({
-          output: JSON.parse(xhr.response).sentence,
+          output: json.sentence,
+          cost: avgCost,
           loading: false,
         });
       } catch {
@@ -55,6 +67,18 @@ class App extends React.Component {
       },
     );
   };
+
+  response() {
+    if (this.state.cost < 0.0) {
+      return '';
+    } else if (this.state.cost <= CUTOFF_GOOD_PUN) {
+      return '*DadBot giggles*';
+    } else if (this.state.cost <= CUTOFF_OK_PUN) {
+      return '*DadBot says*';
+    } else {
+      return '*DadBot hangs his head in shame*';
+    }
+  }
 
   render() {
     return (
@@ -100,6 +124,10 @@ class App extends React.Component {
               placeholder="Output"
               disabled={true}
             />
+          </div>
+
+          <div className="emote">
+            {this.response()}
           </div>
         </div>
       </div>
