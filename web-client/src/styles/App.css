@@ -87,3 +87,12 @@ button:disabled {
 .more-like {
   font-size: 1.8rem;
 }
+
+.emote {
+  color: #545a80;
+  font-size: 1.6rem;
+  margin-top: 1.5rem;
+  height: 30px;
+  text-align: center;
+  width: 100%;
+}
