@@ -6,15 +6,16 @@ import lib.puns as puns
 
 def main(argv):
     punner = puns.Punner(config=puns.PunnerConfig())
-    rerank = True
+    rerank = False
     while True:
         try:
             topic = input("Topic > ")
+            context = ''
             if rerank:
                 context = input("Please use it in a sentence > ")
             sentence = input("Sentence > ")
 
-            pun, costs = punner.punnify(topic, sentence, context='')
+            pun, costs = punner.punnify(topic, sentence, context)
             print(pun)
             print(costs)
         except (EOFError, KeyboardInterrupt):

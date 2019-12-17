@@ -51,6 +51,7 @@ class Punner:
     def __init__(self, config=None):
         self.config = config or PunnerConfig()
         self.word_vector_model = config.word_vector_model()
+        self.threshold = 1.25
 
     def punnify(self, topic, sentence, context):
         """
@@ -73,6 +74,8 @@ class Punner:
         # Calculates the best words to replace with for each position in the
         # sentence
         best_words = [("", sys.float_info.max)] * len(sentence)
+        if self.reranking:
+            best_words = [[("", sys.float_info.max)] for i in range(len(sentence))]
         for i in range(len(sentence)):
             # Skipping stopwords and words that have no pronunciation
             sentence_word_phonemes = pronunciation.word_to_phonemes(sentence[i])
@@ -108,15 +111,20 @@ class Punner:
                 cost = (phonology_cost * self.config.phonology_weight) + (
                     semantic_cost * self.config.semantic_weight
                 )
-
-                if cost < best_words[i][1]:
-                    best_words[i] = (candidate_word, cost)
+                if self.reranking:
+                    best_words[i].append((candidate_word, cost))
+                else:
+                    if cost < best_words[i][1]:
+                        best_words[i] = (candidate_word, cost)
+            if self.reranking:
+                best_words[i].sort(key=lambda x: x[1])
 
         # Calculating the actual indices that we should replace
-        replace_count = self.config.replace_count
-        replacements = sorted(enumerate(best_words), key=lambda group: group[1][1])[
-            :replace_count
-        ]
+        # replace_count = self.config.replace_count
+        # replacements = sorted(enumerate(best_words), key=lambda group: group[1][1])[
+        #     :replace_count
+        # ]
+        replacements =  [replacement for replacement in sorted(enumerate(best_words), key=lambda group: group[1][1]) if replacement[1][1]<self.threshold]
 
         # Replacing words in the sentence
         costs = []
@@ -174,9 +182,6 @@ class ReRanker:
         self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 
     def rerank(self, original_sentence, context_sentence, potential_puns):
-        """
-        Returns the top k (where  k = count) most similar words to the provided word.
-        """
         # process context sentence
         context = context if context[-1] == '.' else context + '.'
         context = '[CLS] ' + context + ' [SEP]'
