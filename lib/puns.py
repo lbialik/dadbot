@@ -3,6 +3,8 @@ import math
 import queue
 import sys
 from typing import Optional
+import torch
+from pytorch_pretrained_bert import BertTokenizer, BertModel, BertForMaskedLM
 
 import lib.pronunciation as pronunciation
 import lib.semantics as semantics
@@ -50,13 +52,16 @@ class Punner:
         self.config = config or PunnerConfig()
         self.word_vector_model = config.word_vector_model()
 
-    def punnify(self, topic, sentence):
+    def punnify(self, topic, sentence, context):
         """
         Given a topic and a sentence, produce a punnified version of the
         sentence where certain words have been replaced with those that are
         phonologically similar to the original word, and semantically similar
         to the topic word.
         """
+        self.reranking = False
+        if len(context) > 0:
+            self.reranking = True
         topic = self.tokenize(topic)[0]
         sentence = self.tokenize(sentence)
         candidate_words = self.normalize_similarity_range(
@@ -160,3 +165,30 @@ class Punner:
             if sim > max_sim:
                 max_sim = sim
         return (min_sim, max_sim)
+
+class ReRanker:
+    """
+    Re-ranks candidate pun sentences based on local and global similarities
+    """
+    def __init__(self):
+        self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+
+    def rerank(self, original_sentence, context_sentence, potential_puns):
+        """
+        Returns the top k (where  k = count) most similar words to the provided word.
+        """
+        # process context sentence
+        context = context if context[-1] == '.' else context + '.'
+        context = '[CLS] ' + context + ' [SEP]'
+        tokenized_context = self.tokenizer.tokenize(context)
+        indexed_tokens = self.tokenizer.convert_tokens_to_ids(tokenized_context)
+
+        # Convert inputs to PyTorch tensors
+        tokens_tensor = torch.tensor([indexed_tokens])
+        segments_tensors = torch.tensor([segments_ids])
+
+        # Load pre-trained model (weights)
+        model = BertModel.from_pretrained('bert-base-uncased')
+
+        # Put the model in "evaluation" mode, meaning feed-forward operation.
+        model.eval()
