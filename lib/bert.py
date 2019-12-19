@@ -1,6 +1,7 @@
 from pytorch_pretrained_bert import BertForMaskedLM
 from pytorch_pretrained_bert import BertModel
 from pytorch_pretrained_bert import BertTokenizer
+import torch
 from typing import List
 from typing import Tuple
 
@@ -10,8 +11,14 @@ class ReRanker:
 
     def __init__(self):
         self.tokenizer = BertTokenizer.from_pretrained(self.PRETRAINED_MODEL_NAME)
+
         self.sentence_model = BertModel.from_pretrained(self.PRETRAINED_MODEL_NAME)
-        self.language_model = BertModel.from_pretrained(self.PRETRAINED_MODEL_NAME)
+        self.sentence_model.eval()
+
+        self.language_model = BertForMaskedLM.from_pretrained(
+            self.PRETRAINED_MODEL_NAME
+        )
+        self.language_model.eval()
 
     def rerank(
         self,
@@ -33,8 +40,28 @@ class ReRanker:
         # TODO
         pass
 
-    def _format_sentence_for_bert(self, sentence: List[str]) -> List[str]:
-        sentence = ["[CLS]"] + sentence
+    def _calculate_surprisal(
+        self, sentence: List[str], masked_index: int, segment_ids: List[int]
+    ) -> float:
+        """
+        Calculates the surprisal of a word appearing at a given index in the
+        sentence. Uses BERT's raw masked language model to predict the
+        probability distribution of the word at the masked index, and returns
+        the inverse probability of the real word.
+        """
+        masked_sentence = sentence[:]
+        masked_sentence[masked_index] = "[MASK]"
+
+        masked_sentence_ids = torch.tensor(
+            [tokenizer.encode(masked_sentence.join(" "))]
+        )
+        prediction = self.language_model(masked_sentence_ids)[0]
+
+        return 1 - prediction[masked_index]
+
+    def _calculate_sentence_similarity(
+        self, sentence1: List[str], sentence2: List[str]
+    ) -> float:
         pass
 
     # def _sentence_similarity(self, sentence: )

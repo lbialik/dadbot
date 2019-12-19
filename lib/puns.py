@@ -2,9 +2,10 @@ import gensim.parsing.preprocessing as preprocessing
 import math
 import queue
 import sys
-from typing import Optional
 import torch
-from pytorch_pretrained_bert import BertTokenizer, BertModel, BertForMaskedLM
+from typing import Optional
+from typing import List
+from typing import Tuple
 
 import lib.pronunciation as pronunciation
 import lib.semantics as semantics
