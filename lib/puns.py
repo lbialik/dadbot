@@ -18,7 +18,7 @@ class PunnerConfig:
     """
 
     DEFAULT_WORD_VECTOR_MODEL = semantics.ServerSimilarWordMap
-    DEFAULT_SIMILAR_WORD_COUNT = 200
+    DEFAULT_SIMILAR_WORD_COUNT = 2500
     DEFAULT_PHONOLOGY_WEIGHT = 1.0
     DEFAULT_SEMANTIC_WEIGHT = 1.0
     DEFAULT_REPLACE_COUNT = 1
@@ -43,7 +43,7 @@ class PunnerConfig:
 
         # The weight we give to semantic distance.
         self.semantic_weight = kwargs.get(
-            "semantic_weigth", self.DEFAULT_SEMANTIC_WEIGHT
+            "semantic_weight", self.DEFAULT_SEMANTIC_WEIGHT
         )
 
         # The count of the sentence we replace with candidate words.
@@ -77,11 +77,13 @@ class Punner:
 
         topic = self.tokenize(topic)[0]
         sentence = self.tokenize(sentence)
+
         candidate_words = self.normalize_similarity_range(
             self.word_vector_model.get_similar_words(
                 topic, self.config.similar_word_count
             )
         )
+        candidate_words.append((topic, 0.99))
 
         best_replacements = self._calculate_best_replacements(
             topic,
@@ -119,7 +121,7 @@ class Punner:
 
             for (candidate_word, semantic_similarity) in candidate_words:
                 candidate_word_phonemes = self._get_word_phonemes(candidate_word)
-                if candidate_word_phonemes is None:
+                if candidate_word_phonemes is None or sentence_word == candidate_word:
                     continue
 
                 phonology_cost = pronunciation.word_phonemic_distance(
