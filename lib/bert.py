@@ -1,6 +1,6 @@
-from pytorch_pretrained_bert import BertForMaskedLM
-from pytorch_pretrained_bert import BertModel
-from pytorch_pretrained_bert import BertTokenizer
+from transformers import BertForMaskedLM
+from transformers import BertModel
+from transformers import BertTokenizer
 import torch
 from typing import List
 from typing import Tuple
@@ -22,27 +22,51 @@ class ReRanker:
 
     def rerank(
         self,
-        original_sentence: List[str],
         context_sentence: List[str],
-        potential_puns: List[Tuple[List[str], float]],
-    ) -> List[Tuple[List[str], float]]:
+        potential_puns: List[Tuple[List[str], int, float]],
+    ) -> List[Tuple[List[str], int, float]]:
         """
         Re-ranks a list of potential puns based on the original sentence and a
         provided context sentence. Based on Hehe et. al's work (2019) work as
         inspiration.
 
-        We take global surprise to be:
+        We take global surprise to be the punned sentence followed by the
+        context sentence, and we take local surprise to be the punned sentence
+        alone.
 
-        We take local surprise to be:
-
-        Then we minimize global surprise and maximize local surprise.
+        We maximize the ratio local/global, to simultaneously minimize global
+        surprise and maximize local surprise.
         """
-        # TODO
-        pass
+        local_surprises = [
+            self._calculate_surprisal(
+                ["[CLS]"] + potential_pun + ["[SEP]"],
+                index + 1,  # We need to add 1 to the index to offset the CLS token
+            )
+            for (potential_pun, index, _) in potential_puns
+        ]
 
-    def _calculate_surprisal(
-        self, sentence: List[str], masked_index: int, segment_ids: List[int]
-    ) -> float:
+        global_surprises = [
+            self._calculate_surprisal(
+                ["[CLS]"] + context_sentence + ["[SEP]"] + potential_pun + ["[SEP]"],
+                index + 2 + len(context_sentence),
+            )
+            for (potential_pun, index, _) in potential_puns
+        ]
+
+        # TODO: Factor in sentence similarity
+
+        ratios = [
+            (local_surprises[i] / global_surprises[i], i)
+            for i in range(len(potential_puns))
+        ]
+        ratios.sort(key=lambda x: x[0], reverse=True)
+
+        reranked_puns = []
+        for (_, i) in ratios:
+            reranked_puns.append(potential_puns[0])
+        return reranked_puns
+
+    def _calculate_surprisal(self, sentence: List[str], masked_index: int) -> float:
         """
         Calculates the surprisal of a word appearing at a given index in the
         sentence. Uses BERT's raw masked language model to predict the
@@ -53,18 +77,22 @@ class ReRanker:
         masked_sentence[masked_index] = "[MASK]"
 
         masked_sentence_ids = torch.tensor(
-            [tokenizer.encode(masked_sentence.join(" "))]
+            [self.tokenizer.encode(" ".join(masked_sentence), add_special_tokens=False)]
         )
-        prediction = self.language_model(masked_sentence_ids)[0]
 
-        return 1 - prediction[masked_index]
+        scores = self.language_model(
+            masked_sentence_ids, masked_lm_labels=masked_sentence_ids
+        )[1][0, masked_index]
 
-    def _calculate_sentence_similarity(
-        self, sentence1: List[str], sentence2: List[str]
-    ) -> float:
-        pass
+        distribution = torch.softmax(scores, 0)
 
-    # def _sentence_similarity(self, sentence: )
+        prediction = distribution[
+            self.tokenizer.encode([sentence[masked_index]], add_special_tokens=False)[
+                0
+            ],
+        ]
+
+        return 1 - prediction
 
 
 # class ReRanker:
