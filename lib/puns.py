@@ -43,7 +43,7 @@ class PunnerConfig:
 
         # The weight we give to semantic distance.
         self.semantic_weight = kwargs.get(
-            "semantic_weigth", self.DEFAULT_SEMANTIC_WEIGHT
+            "semantic_weight", self.DEFAULT_SEMANTIC_WEIGHT
         )
 
         # The count of the sentence we replace with candidate words.
@@ -86,7 +86,6 @@ class Punner:
         best_replacements = self._calculate_best_replacements(
             topic,
             sentence,
-            context,
             candidate_words,
             self.config.threshold if not reranking else self.config.rerank_threshold,
         )
