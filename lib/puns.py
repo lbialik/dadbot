@@ -21,6 +21,8 @@ class PunnerConfig:
     DEFAULT_PHONOLOGY_WEIGHT = 1.0
     DEFAULT_SEMANTIC_WEIGHT = 1.0
     DEFAULT_REPLACE_COUNT = 1
+    DEFAULT_THRESHOLD = 1.2
+    DEFAULT_RERANK_THRESHOLD = 2.3
 
     def __init__(self, **kwargs):
         # The word vector model we want to use.
@@ -46,13 +48,20 @@ class PunnerConfig:
         # The count of the sentence we replace with candidate words.
         self.replace_count = kwargs.get("replace_count", self.DEFAULT_REPLACE_COUNT)
 
+        # The threshold by which we'll replace a word in a sentence
+        self.threshold = kwargs.get("threshold", self.DEFAULT_THRESHOLD)
+
+        # The threshold by which we'll replace word when we're reranking puns
+        # with DadBERT.
+        self.rerank_threshold = kwargs.get(
+            "rerank_threshold", self.DEFAULT_RERANK_THRESHOLD
+        )
+
 
 class Punner:
     def __init__(self, config=None):
         self.config = config or PunnerConfig()
         self.word_vector_model = config.word_vector_model()
-        self.threshold = 1.2
-        self.consideration_threshold = 2.3
 
     def punnify(self, topic, sentence, context, model, masked_model):
         """
@@ -129,7 +138,11 @@ class Punner:
         if self.reranking:
             potential_puns = []
             for (index, potential_replacements) in enumerate(best_words):
-                words_to_consider = [replacement for replacement in potential_replacements if replacement[1] < self.consideration_threshold]
+                words_to_consider = [
+                    replacement
+                    for replacement in potential_replacements
+                    if replacement[1] < self.config.rerank_threshold
+                ]
                 for candidate_word in words_to_consider:
                     pun_sentence = sentence[:]
                     pun_sentence[index] = candidate_word[0]
@@ -137,11 +150,21 @@ class Punner:
             # sentence, costs = potential_puns[0]
             RR = ReRanker(model, masked_model)
             potential_sentences = [self.untokenize(pun[0]) for pun in potential_puns]
-            reranked_puns = RR.rerank(self.untokenize(sentence), self.untokenize(self.tokenize(context)), potential_sentences)
+            reranked_puns = RR.rerank(
+                self.untokenize(sentence),
+                self.untokenize(self.tokenize(context)),
+                potential_sentences,
+            )
             # print(reranked_puns)
             sentence, cost = reranked_puns[0]
         else:
-            replacements =  [replacement for replacement in sorted(enumerate(best_words), key=lambda group: group[1][1]) if replacement[1][1]<self.threshold]
+            replacements = [
+                replacement
+                for replacement in sorted(
+                    enumerate(best_words), key=lambda group: group[1][1]
+                )
+                if replacement[1][1] < self.config.threshold
+            ]
             # Replacing words in the sentence
             cost = []
             for (i, (best_word, cost)) in replacements:
@@ -190,22 +213,24 @@ class Punner:
                 max_sim = sim
         return (min_sim, max_sim)
 
+
 class ReRanker:
     """
     Re-ranks candidate pun sentences based on local and global similarities
     """
+
     def __init__(self, model, masked_model):
-        self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+        self.tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
         self.model = model
         self.masked_model = masked_model
 
     def pre_process(self, sentences):
         # process context sentence
-        sentence = '[CLS]'
+        sentence = "[CLS]"
         # print(sentences)
         for sent in sentences:
             # print(sent)
-            sentence += ' ' + sent + ' [SEP]'
+            sentence += " " + sent + " [SEP]"
         tokenized_sentence = self.tokenizer.tokenize(sentence)
         indexed_tokens = self.tokenizer.convert_tokens_to_ids(tokenized_sentence)
         return tokenized_sentence, indexed_tokens
@@ -218,7 +243,7 @@ class ReRanker:
     def find_surprisal(self, sentence, masked_index, segments_ids):
         masked_sentence = sentence[:]
         pun_word = sentence[masked_index]
-        masked_sentence[masked_index] = '[MASK]'
+        masked_sentence[masked_index] = "[MASK]"
         indexed_tokens = self.tokenizer.convert_tokens_to_ids(masked_sentence)
         tokens_tensor = torch.tensor([indexed_tokens])
         segments_tensors = torch.tensor([segments_ids])
@@ -237,8 +262,8 @@ class ReRanker:
     def find_similarity(self, sen1, sen2):
         indexed_tokens_1 = self.tokenizer.convert_tokens_to_ids(sen1)
         indexed_tokens_2 = self.tokenizer.convert_tokens_to_ids(sen2)
-        segments_ids_1 = [1]*len(sen1)
-        segments_ids_2 = [1]*len(sen2)
+        segments_ids_1 = [1] * len(sen1)
+        segments_ids_2 = [1] * len(sen2)
         # Convert inputs to PyTorch tensors
         tokens_tensor_1 = torch.tensor([indexed_tokens_1])
         tokens_tensor_2 = torch.tensor([indexed_tokens_1])
@@ -246,17 +271,21 @@ class ReRanker:
         segments_tensors_2 = torch.tensor([segments_ids_2])
 
         with torch.no_grad():
-            outputs_1, _ = self.model(tokens_tensor_1, token_type_ids=segments_tensors_1)
+            outputs_1, _ = self.model(
+                tokens_tensor_1, token_type_ids=segments_tensors_1
+            )
             print(len(outputs_1))
-            print('HEREEEEEEEEEe')
+            print("HEREEEEEEEEEe")
             print(outputs_1)
-            print('HELLOOOOOOOOOOOO')
+            print("HELLOOOOOOOOOOOO")
             cls_1 = outputs_1
-            outputs_2, _ = self.model(tokens_tensor_2, token_type_ids=segments_tensors_2)
+            outputs_2, _ = self.model(
+                tokens_tensor_2, token_type_ids=segments_tensors_2
+            )
             print(len(outputs_2))
             print(outputs_2)
             cls_2 = outputs_2
-        
+
         print(cls_1, cls_2)
         cos = torch.nn.CosineSimilarity()
         diff = cos(cls_1, cls_2)
@@ -264,7 +293,9 @@ class ReRanker:
         return diff
 
     def rerank(self, original_sentence, context_sentence, potential_puns):
-        tokenized_original, original_sentence_tensors = self.pre_process([original_sentence])
+        tokenized_original, original_sentence_tensors = self.pre_process(
+            [original_sentence]
+        )
         tokenized_context, context_tensors = self.pre_process([context_sentence])
         reranked_puns = []
 
@@ -273,19 +304,29 @@ class ReRanker:
 
         og_similarity = self.find_similarity(tokenized_original, tokenized_context)
         for pun in potential_puns:
-            punned = [word for word in pun.split() if word not in original_sentence.split()][0]
-            index = pun.split().index(punned)+1
+            punned = [
+                word for word in pun.split() if word not in original_sentence.split()
+            ][0]
+            index = pun.split().index(punned) + 1
             tokenized_pun, pun_tensors = self.pre_process([pun])
-            tokenized_global, global_context_tensors = self.pre_process([context_sentence, pun])
-            local_segments_id = [1]*len(tokenized_pun)
-            global_segments_id = [1]*(len(tokenized_pun)) + [2]*(len(tokenized_context))
-            local_surprisal = self.find_surprisal(tokenized_pun, index, local_segments_id)
-            global_surprisal = self.find_surprisal(tokenized_global, index+len(tokenized_context), global_segments_id)
+            tokenized_global, global_context_tensors = self.pre_process(
+                [context_sentence, pun]
+            )
+            local_segments_id = [1] * len(tokenized_pun)
+            global_segments_id = [1] * (len(tokenized_pun)) + [2] * (
+                len(tokenized_context)
+            )
+            local_surprisal = self.find_surprisal(
+                tokenized_pun, index, local_segments_id
+            )
+            global_surprisal = self.find_surprisal(
+                tokenized_global, index + len(tokenized_context), global_segments_id
+            )
             pun_similarity = self.find_similarity(tokenized_pun, tokenized_context)
             similarity_score = og_similarity - pun_similarity
             surprisal_score = global_surprisal - local_surprisal
             score = similarity_score + surprisal_score
-            print(original_sentence, ' --> ', pun)
+            print(original_sentence, " --> ", pun)
             print(global_surprisal, local_surprisal)
             print(og_similarity, pun_similarity)
             print(score)
