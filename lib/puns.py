@@ -86,7 +86,6 @@ class Punner:
         best_replacements = self._calculate_best_replacements(
             topic,
             sentence,
-            context,
             candidate_words,
             self.config.threshold if not reranking else self.config.rerank_threshold,
         )
@@ -159,7 +158,7 @@ class Punner:
         """
         punned_sentences = []
         for i in range(len(sentence)):
-            for j in range(len(best_replacements)):
+            for j in range(len(best_replacements[i])):
                 punned_sentence = sentence[:]
                 punned_sentence[i] = best_replacements[i][j][0]
 
