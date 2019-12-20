@@ -111,4 +111,4 @@ class ReRanker:
             token_type_ids.append(index)
             if word == "[SEP]":
                 index += 1
-        return token_type_ids
+        return torch.tensor(token_type_ids).unsqueeze(0)
