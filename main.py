@@ -1,14 +1,18 @@
 import sys
 import torch
 import traceback
+from typing import List
 
 import lib.bert as bert
 import lib.puns as puns
 
 
 def main(argv):
+    reranker = None
+    if len(argv) >= 2 and argv[1] == "rerank":
+        reranker = bert.ReRanker()
+
     punner = puns.Punner(config=puns.PunnerConfig())
-    reranker = bert.ReRanker()
     while True:
         try:
             topic = input("Topic > ")
