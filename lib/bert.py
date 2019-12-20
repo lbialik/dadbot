@@ -63,7 +63,7 @@ class ReRanker:
 
         reranked_puns = []
         for (_, i) in ratios:
-            reranked_puns.append(potential_puns[0])
+            reranked_puns.append(potential_puns[i])
         return reranked_puns
 
     def _calculate_surprisal(self, sentence: List[str], masked_index: int) -> float:
