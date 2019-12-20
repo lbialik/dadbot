@@ -39,6 +39,7 @@ class ReRanker:
         We maximize the ratio local/global, to simultaneously minimize global
         surprise and maximize local surprise.
         """
+        # TODO: Vectorize
         local_surprises = [
             self._calculate_surprisal(
                 ["[CLS]"] + potential_pun + ["[SEP]"],
@@ -55,10 +56,13 @@ class ReRanker:
             for (potential_pun, index, _) in potential_puns
         ]
 
-        # TODO: Factor in sentence similarity
+        next_sentences = [
+            self._calculate_next_sentence(context_sentence, potential_pun)
+            for (potential_pun, index, _) in potential_puns
+        ]
 
         ratios = [
-            (local_surprises[i] / global_surprises[i], i)
+            (local_surprises[i] / ((next_sentences[i] + global_surprises[i]) / 2), i)
             for i in range(len(potential_puns))
         ]
         ratios.sort(key=lambda x: x[0], reverse=True)
@@ -81,17 +85,20 @@ class ReRanker:
         masked_sentence_ids = torch.tensor(
             [self.tokenizer.encode(" ".join(masked_sentence), add_special_tokens=False)]
         )
+        token_type_ids = self._get_token_type_ids(masked_sentence_ids)
 
         with torch.no_grad():
             scores = self.language_model(
                 masked_sentence_ids,
-                token_type_ids=self._get_token_type_ids(masked_sentence),
+                token_type_ids=token_type_ids,
                 masked_lm_labels=masked_sentence_ids,
             )[1][0, masked_index]
 
         distribution = torch.softmax(scores, 0)
 
         prediction = distribution[
+            # We have to reuse the BertTokenizer to give us the index of our
+            # target word in the vocabulary.
             self.tokenizer.encode([sentence[masked_index]], add_special_tokens=False)[
                 0
             ],
@@ -99,16 +106,46 @@ class ReRanker:
 
         return 1 - prediction
 
-    def _get_token_type_ids(self, sentence: List[str]) -> List[int]:
+    def _calculate_next_sentence(
+        self, antecedent_sentence: List[str], subsequent_sentence: List[str]
+    ) -> float:
+        """
+        Calculates the probability that the subsequent sentence follows the
+        antecedent sentence.
+        """
+        sentence = (
+            ["[CLS]"]
+            + antecedent_sentence
+            + ["[SEP]"]
+            + subsequent_sentence
+            + ["[SEP]"]
+        )
+
+        sentence_ids = torch.tensor(
+            [self.tokenizer.encode(" ".join(sentence), add_special_tokens=False)]
+        )
+        token_type_ids = self._get_token_type_ids(sentence_ids)
+
+        with torch.no_grad():
+            scores = self.sentence_model(sentence_ids, token_type_ids=token_type_ids)[
+                0
+            ][0]
+
+        distribution = torch.softmax(scores, 0)
+
+        return distribution[1]
+
+    def _get_token_type_ids(self, sentence_ids: List[int]) -> List[int]:
         """
         From a list of tokens formatted for BERT, i.e. includes [CLS] and
         [SEP], produce the token_type_ids necessary for the model.
         """
+        sep_id = self.tokenizer.encode("[SEP]", add_special_tokens=False)[0]
 
         token_type_ids = []
         index = 0
-        for word in sentence:
+        for id in sentence_ids[0]:
             token_type_ids.append(index)
-            if word == "[SEP]":
+            if id == sep_id:
                 index += 1
-        return torch.tensor(token_type_ids).unsqueeze(0)
+        return torch.tensor(token_type_ids)
