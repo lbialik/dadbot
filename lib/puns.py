@@ -2,8 +2,12 @@ import gensim.parsing.preprocessing as preprocessing
 import math
 import queue
 import sys
+import torch
 from typing import Optional
+from typing import List
+from typing import Tuple
 
+import lib.bert as bert
 import lib.pronunciation as pronunciation
 import lib.semantics as semantics
 
@@ -15,10 +19,12 @@ class PunnerConfig:
     """
 
     DEFAULT_WORD_VECTOR_MODEL = semantics.ServerSimilarWordMap
-    DEFAULT_SIMILAR_WORD_COUNT = 200
+    DEFAULT_SIMILAR_WORD_COUNT = 2500
     DEFAULT_PHONOLOGY_WEIGHT = 1.0
     DEFAULT_SEMANTIC_WEIGHT = 1.0
     DEFAULT_REPLACE_COUNT = 1
+    DEFAULT_THRESHOLD = 1.2
+    DEFAULT_RERANK_THRESHOLD = 1.7
 
     def __init__(self, **kwargs):
         # The word vector model we want to use.
@@ -38,11 +44,20 @@ class PunnerConfig:
 
         # The weight we give to semantic distance.
         self.semantic_weight = kwargs.get(
-            "semantic_weigth", self.DEFAULT_SEMANTIC_WEIGHT
+            "semantic_weight", self.DEFAULT_SEMANTIC_WEIGHT
         )
 
         # The count of the sentence we replace with candidate words.
         self.replace_count = kwargs.get("replace_count", self.DEFAULT_REPLACE_COUNT)
+
+        # The threshold by which we'll replace a word in a sentence
+        self.threshold = kwargs.get("threshold", self.DEFAULT_THRESHOLD)
+
+        # The threshold by which we'll replace word when we're reranking puns
+        # with DadBERT.
+        self.rerank_threshold = kwargs.get(
+            "rerank_threshold", self.DEFAULT_RERANK_THRESHOLD
+        )
 
 
 class Punner:
@@ -50,76 +65,133 @@ class Punner:
         self.config = config or PunnerConfig()
         self.word_vector_model = config.word_vector_model()
 
-    def punnify(self, topic, sentence):
+    def punnify(self, topic: str, sentence: str, context: str, reranker: bert.ReRanker):
         """
         Given a topic and a sentence, produce a punnified version of the
         sentence where certain words have been replaced with those that are
         phonologically similar to the original word, and semantically similar
         to the topic word.
         """
+        reranking = False
+        if len(context) > 0:
+            reranking = True
+            context = self.tokenize(context)
+
         topic = self.tokenize(topic)[0]
         sentence = self.tokenize(sentence)
+
         candidate_words = self.normalize_similarity_range(
             self.word_vector_model.get_similar_words(
                 topic, self.config.similar_word_count
             )
         )
+        candidate_words.append((topic, 0.99))
 
-        # Calculates the best words to replace with for each position in the
-        # sentence
-        best_words = [("", sys.float_info.max)] * len(sentence)
-        for i in range(len(sentence)):
-            # Skipping stopwords and words that have no pronunciation
-            sentence_word_phonemes = pronunciation.word_to_phonemes(sentence[i])
-            if (
-                len(sentence_word_phonemes) == 0
-                or sentence[i] in preprocessing.STOPWORDS
-            ):
+        best_replacements = self._calculate_best_replacements(
+            topic,
+            sentence,
+            candidate_words,
+            self.config.threshold if not reranking else self.config.rerank_threshold,
+        )
+
+        if reranking:
+            pun_candidates = self._generate_pun_candidates(sentence, best_replacements)
+            reranked_pun_candidates = reranker.rerank(context, pun_candidates)
+            return reranked_pun_candidates[0][0], reranked_pun_candidates[0][2]
+        else:
+            return self._generate_best_pun(sentence, best_replacements)
+
+    def _calculate_best_replacements(
+        self,
+        topic: str,
+        sentence: List[str],
+        candidate_words: List[Tuple[str, float]],
+        threshold: float,
+    ) -> List[List[Tuple[str, float]]]:
+        """
+        Calculates the most optimal candidate words with which we can replace
+        words in the sentence.
+
+        The list we return is the length of the sentence. The list at index i
+        corresponds to the best candidates for replacement at that index.
+        """
+        best_replacements = []
+        for (i, sentence_word) in enumerate(sentence):
+            best_replacements.append([])
+            sentence_word_phonemes = self._get_word_phonemes(sentence_word)
+            if sentence_word_phonemes is None:
                 continue
-            sentence_word_phonemes = sentence_word_phonemes[0]
 
             for (candidate_word, semantic_similarity) in candidate_words:
-                # Skipping stopwords, words that have no pronunciation, and
-                # words that are equal to the word we already have.
-                candidate_word_phonemes = pronunciation.word_to_phonemes(candidate_word)
-                if (
-                    len(candidate_word_phonemes) == 0
-                    or candidate_word in preprocessing.STOPWORDS
-                    or candidate_word == sentence[i]
-                ):
+                candidate_word_phonemes = self._get_word_phonemes(candidate_word)
+                if candidate_word_phonemes is None or sentence_word == candidate_word:
                     continue
-                candidate_word_phonemes = candidate_word_phonemes[0]
 
                 phonology_cost = pronunciation.word_phonemic_distance(
-                    # TODO: One of:
-                    #   1) Search over all pronunciations
-                    #   2) Find out if there's a pattern about American vs.
-                    #      British, and always choose American.
-                    sentence_word_phonemes,
-                    candidate_word_phonemes,
+                    sentence_word_phonemes, candidate_word_phonemes
                 )
                 semantic_cost = 1 - semantic_similarity
-
                 cost = (phonology_cost * self.config.phonology_weight) + (
                     semantic_cost * self.config.semantic_weight
                 )
 
-                if cost < best_words[i][1]:
-                    best_words[i] = (candidate_word, cost)
+                if cost <= threshold:
+                    best_replacements[i].append((candidate_word, cost))
+            best_replacements[i].sort(key=lambda tuple: tuple[1])
 
-        # Calculating the actual indices that we should replace
-        replace_count = self.config.replace_count
-        replacements = sorted(enumerate(best_words), key=lambda group: group[1][1])[
-            :replace_count
-        ]
+        return best_replacements
 
-        # Replacing words in the sentence
-        costs = []
-        for (i, (best_word, cost)) in replacements:
-            costs.append((best_word, cost))
-            sentence[i] = best_word
+    def _get_word_phonemes(self, word: str) -> Optional[str]:
+        """
+        Tries to retrieve the phonemic representation of a word. If the word
+        doesn't have a pronunciation or if it is a stop-word, we just return
+        None.
+        """
+        word_phonemes = pronunciation.word_to_phonemes(word)
+        if len(word_phonemes) == 0 or word in preprocessing.STOPWORDS:
+            return None
+        return word_phonemes[0]
 
-        return self.untokenize(sentence), costs
+    def _generate_pun_candidates(
+        self, sentence: List[str], best_replacements: List[List[Tuple[str, float]]]
+    ) -> List[Tuple[List[str], int, float]]:
+        """
+        Generates each possible pun from a set of replacements that are
+        sufficiently good.
+
+        Assumes that len(sentence) == len(best_replacements)
+        """
+        punned_sentences = []
+        for i in range(len(sentence)):
+            for j in range(len(best_replacements[i])):
+                punned_sentence = sentence[:]
+                punned_sentence[i] = best_replacements[i][j][0]
+
+                punned_sentences.append(
+                    (punned_sentence, i, best_replacements[i][j][1])
+                )
+        return punned_sentences
+
+    def _generate_best_pun(
+        self, sentence: List[str], best_replacements: List[List[Tuple[str, float]]]
+    ) -> Tuple[List[str], List[float]]:
+        """
+        Generates one single best sentence. Replaces each word in the sentence
+        with the best candidate replacement sentence at each index.
+
+        Assumes that:
+          1) len(sentence) == len(best_replacements)
+          2) best_replacements is sorted, in descending order
+        """
+        punned_sentence = sentence[:]
+        replacement_costs = []
+        for i in range(len(sentence)):
+            if len(best_replacements[i]) > 0:
+                punned_sentence[i] = best_replacements[i][0][0]
+                replacement_costs.append(best_replacements[i][0][1])
+            else:
+                replacement_costs.append(0)
+        return punned_sentence, replacement_costs
 
     def tokenize(self, string):
         """
