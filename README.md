@@ -2,9 +2,7 @@
 
 ## Description
 
-NLP project to generate puns from topic words and sentences!
-
-**TODO: More**
+NLP project to generate puns from topic words and sentences! See report.pdf for details on DadBot's implementation.
 
 ## Running
 
@@ -28,6 +26,9 @@ $ python server.py
 
 # In another window, run the pun generator
 $ python main.py
+
+# If you want to use BERT to rerank then
+$ python main.py rerank
 ```
 
 ### Web
