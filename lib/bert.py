@@ -9,7 +9,7 @@ from typing import Tuple
 class ReRanker:
     PRETRAINED_MODEL_NAME = "bert-base-uncased"
 
-    def __init__(self):
+    def __init__(self, surprise_weight: float = 2.0, sentence_weight: float = 1.0):
         self.tokenizer = BertTokenizer.from_pretrained(self.PRETRAINED_MODEL_NAME)
 
         self.sentence_model = BertForNextSentencePrediction.from_pretrained(
@@ -21,6 +21,9 @@ class ReRanker:
             self.PRETRAINED_MODEL_NAME
         )
         self.language_model.eval()
+
+        self.surprise_weight = surprise_weight
+        self.sentence_weight = sentence_weight
 
     def rerank(
         self,
@@ -40,35 +43,46 @@ class ReRanker:
         surprise and maximize local surprise.
         """
         # TODO: Vectorize
-        local_surprises = [
-            self._calculate_surprisal(
-                ["[CLS]"] + potential_pun + ["[SEP]"],
-                index + 1,  # We need to add 1 to the index to offset the CLS token
-            )
-            for (potential_pun, index, _) in potential_puns
-        ]
+        local_surprises = torch.tensor(
+            [
+                self._calculate_surprisal(
+                    ["[CLS]"] + potential_pun + ["[SEP]"],
+                    index + 1,  # We need to add 1 to the index to offset the CLS token
+                )
+                for (potential_pun, index, _) in potential_puns
+            ]
+        )
 
-        global_surprises = [
-            self._calculate_surprisal(
-                ["[CLS]"] + context_sentence + ["[SEP]"] + potential_pun + ["[SEP]"],
-                index + 2 + len(context_sentence),
-            )
-            for (potential_pun, index, _) in potential_puns
-        ]
+        global_surprises = torch.tensor(
+            [
+                self._calculate_surprisal(
+                    ["[CLS]"]
+                    + context_sentence
+                    + ["[SEP]"]
+                    + potential_pun
+                    + ["[SEP]"],
+                    index + 2 + len(context_sentence),
+                )
+                for (potential_pun, index, _) in potential_puns
+            ]
+        )
 
-        next_sentences = [
-            self._calculate_next_sentence(context_sentence, potential_pun)
-            for (potential_pun, index, _) in potential_puns
-        ]
+        next_sentences_probs = torch.tensor(
+            [
+                self._calculate_next_sentence_prob(context_sentence, potential_pun)
+                for (potential_pun, index, _) in potential_puns
+            ]
+        )
 
-        ratios = [
-            (local_surprises[i] / ((next_sentences[i] + global_surprises[i]) / 2), i)
-            for i in range(len(potential_puns))
-        ]
-        ratios.sort(key=lambda x: x[0], reverse=True)
+        scores = (
+            self.surprise_weight * torch.softmax(local_surprises / global_surprises, 0)
+            + self.sentence_weight * next_sentences_probs
+        ).tolist()
+        scores = [(scores[i], i) for i in range(len(scores))]
+        scores.sort(key=lambda x: x[0], reverse=True)
 
         reranked_puns = []
-        for (_, i) in ratios:
+        for (_, i) in scores:
             reranked_puns.append(potential_puns[i])
         return reranked_puns
 
@@ -106,7 +120,7 @@ class ReRanker:
 
         return 1 - prediction
 
-    def _calculate_next_sentence(
+    def _calculate_next_sentence_prob(
         self, antecedent_sentence: List[str], subsequent_sentence: List[str]
     ) -> float:
         """
