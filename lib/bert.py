@@ -82,11 +82,12 @@ class ReRanker:
             [self.tokenizer.encode(" ".join(masked_sentence), add_special_tokens=False)]
         )
 
-        scores = self.language_model(
-            masked_sentence_ids,
-            token_type_ids=self._get_token_type_ids(masked_sentence),
-            masked_lm_labels=masked_sentence_ids,
-        )[1][0, masked_index]
+        with torch.no_grad():
+            scores = self.language_model(
+                masked_sentence_ids,
+                token_type_ids=self._get_token_type_ids(masked_sentence),
+                masked_lm_labels=masked_sentence_ids,
+            )[1][0, masked_index]
 
         distribution = torch.softmax(scores, 0)
 

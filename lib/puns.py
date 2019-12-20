@@ -24,7 +24,7 @@ class PunnerConfig:
     DEFAULT_SEMANTIC_WEIGHT = 1.0
     DEFAULT_REPLACE_COUNT = 1
     DEFAULT_THRESHOLD = 1.2
-    DEFAULT_RERANK_THRESHOLD = 2.3
+    DEFAULT_RERANK_THRESHOLD = 1.7
 
     def __init__(self, **kwargs):
         # The word vector model we want to use.
