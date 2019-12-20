@@ -7,6 +7,7 @@ from typing import Optional
 from typing import List
 from typing import Tuple
 
+import lib.bert as bert
 import lib.pronunciation as pronunciation
 import lib.semantics as semantics
 
@@ -23,7 +24,7 @@ class PunnerConfig:
     DEFAULT_SEMANTIC_WEIGHT = 1.0
     DEFAULT_REPLACE_COUNT = 1
     DEFAULT_THRESHOLD = 1.2
-    DEFAULT_RERANK_THRESHOLD = 2.3
+    DEFAULT_RERANK_THRESHOLD = 1.7
 
     def __init__(self, **kwargs):
         # The word vector model we want to use.
@@ -64,7 +65,7 @@ class Punner:
         self.config = config or PunnerConfig()
         self.word_vector_model = config.word_vector_model()
 
-    def punnify(self, topic, sentence, context, model, masked_model):
+    def punnify(self, topic: str, sentence: str, context: str, reranker: bert.ReRanker):
         """
         Given a topic and a sentence, produce a punnified version of the
         sentence where certain words have been replaced with those that are
@@ -74,6 +75,7 @@ class Punner:
         reranking = False
         if len(context) > 0:
             reranking = True
+            context = self.tokenize(context)
 
         topic = self.tokenize(topic)[0]
         sentence = self.tokenize(sentence)
@@ -94,7 +96,8 @@ class Punner:
 
         if reranking:
             pun_candidates = self._generate_pun_candidates(sentence, best_replacements)
-            # TODO: Fix and use ReRanker
+            reranked_pun_candidates = reranker.rerank(context, pun_candidates)
+            return reranked_pun_candidates[0][0], reranked_pun_candidates[0][2]
         else:
             return self._generate_best_pun(sentence, best_replacements)
 
@@ -151,7 +154,7 @@ class Punner:
 
     def _generate_pun_candidates(
         self, sentence: List[str], best_replacements: List[List[Tuple[str, float]]]
-    ) -> List[Tuple[List[str], float]]:
+    ) -> List[Tuple[List[str], int, float]]:
         """
         Generates each possible pun from a set of replacements that are
         sufficiently good.
@@ -164,7 +167,10 @@ class Punner:
                 punned_sentence = sentence[:]
                 punned_sentence[i] = best_replacements[i][j][0]
 
-                punned_sentences.append((punned_sentence, best_replacements[i][j][1]))
+                punned_sentences.append(
+                    (punned_sentence, i, best_replacements[i][j][1])
+                )
+        return punned_sentences
 
     def _generate_best_pun(
         self, sentence: List[str], best_replacements: List[List[Tuple[str, float]]]

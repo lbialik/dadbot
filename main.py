@@ -1,24 +1,22 @@
 import sys
+import torch
 import traceback
 
+import lib.bert as bert
 import lib.puns as puns
-import torch
-from pytorch_pretrained_bert import BertTokenizer, BertModel, BertForMaskedLM
+
 
 def main(argv):
     punner = puns.Punner(config=puns.PunnerConfig())
-    rerank = True
-    # Load pre-trained model (weights)
-    model = BertModel.from_pretrained('bert-base-uncased')
-    masked_model = BertForMaskedLM.from_pretrained('bert-base-uncased')
+    reranker = bert.ReRanker()
     while True:
         try:
             topic = input("Topic > ")
-            context = ''
-            if rerank:
+            context = ""
+            if reranker is not None:
                 context = input("Please use it in a sentence > ")
             sentence = input("Sentence > ")
-            pun, costs = punner.punnify(topic, sentence, context, model, masked_model)
+            pun, costs = punner.punnify(topic, sentence, context, reranker)
             print(pun)
             print(costs)
         except (EOFError, KeyboardInterrupt):
